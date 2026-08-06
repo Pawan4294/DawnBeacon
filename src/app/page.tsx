@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
-import TabNav from "@/components/TabNav";
 import Footer from "@/components/Footer";
 import HomeTab from "@/tabs/Home";
 import CheckMyFitTab from "@/tabs/CheckMyFit";
@@ -59,8 +58,7 @@ export default function DawnBeaconApp() {
 
       {/* Main layout */}
       <div className="relative z-10 flex flex-col min-h-screen">
-        <Header />
-        <TabNav activeTab={activeTab} onTabChange={handleTabChange} />
+        <Header activeTab={activeTab} onTabChange={handleTabChange} />
 
         <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
           <AnimatePresence mode="wait">

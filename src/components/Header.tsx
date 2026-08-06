@@ -2,8 +2,15 @@
 
 import { motion } from "framer-motion";
 import { AlertTriangle, Radio } from "lucide-react";
+import TabNav from "@/components/TabNav";
+import type { TabId } from "@/app/page";
 
-export default function Header() {
+interface HeaderProps {
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
+}
+
+export default function Header({ activeTab, onTabChange }: HeaderProps) {
   return (
     <header className="relative z-50">
       {/* Disclaimer bar — always visible on every tab */}
@@ -57,8 +64,12 @@ export default function Header() {
             </div>
           </motion.div>
 
+          <div className="hidden lg:block">
+            <TabNav activeTab={activeTab} onTabChange={onTabChange} />
+          </div>
+
           <motion.div
-            className="hidden sm:flex items-center gap-2 text-xs text-white/40"
+            className="hidden sm:flex items-center gap-2 text-xs text-white/40 flex-shrink-0"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -66,6 +77,11 @@ export default function Header() {
             <span className="pulse-orange inline-block w-1.5 h-1.5 rounded-full bg-[#E96C38]" />
             <span>Live data from DAWN&apos;s published sources</span>
           </motion.div>
+        </div>
+
+        {/* Tabs on their own row for smaller screens where the middle row is hidden */}
+        <div className="lg:hidden mt-3 max-w-6xl mx-auto">
+          <TabNav activeTab={activeTab} onTabChange={onTabChange} inline />
         </div>
       </div>
     </header>
