@@ -33,9 +33,9 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
       {/* Main header */}
       <div className="px-4 py-4 border-b border-[rgba(233,108,56,0.1)]"
         style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(20px)" }}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <motion.div
-            className="flex items-center gap-3"
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-8">
+  <motion.div
+    className="flex items-center gap-3 flex-shrink-0"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
@@ -64,9 +64,9 @@ export default function Header({ activeTab, onTabChange }: HeaderProps) {
             </div>
           </motion.div>
 
-          <div className="hidden lg:block">
-            <TabNav activeTab={activeTab} onTabChange={onTabChange} />
-          </div>
+          <div className="hidden lg:block flex-shrink-0 mx-6">
+  <TabNav activeTab={activeTab} onTabChange={onTabChange} inline />
+</div>
 
           <motion.div
             className="hidden sm:flex items-center gap-2 text-xs text-white/40 flex-shrink-0"
