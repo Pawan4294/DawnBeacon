@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
-import nodemailer from "nodemailer";
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,40 +43,38 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
     });
 
-    // Send confirmation email if SMTP is configured
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const fromEmail = process.env.FROM_EMAIL || "noreply@dawnbeacon.community";
+    // Send confirmation email via Resend if configured
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.FROM_EMAIL || "onboarding@resend.dev";
 
-    if (smtpHost && smtpUser && smtpPass) {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: false,
-        auth: { user: smtpUser, pass: smtpPass },
-      });
-
-      await transporter.sendMail({
-        from: fromEmail,
-        to: email,
-        subject: "Your DawnBeacon Check My Fit Result",
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #E96C38;">Your DawnBeacon Result</h2>
-            <p>Hi ${name},</p>
-            <p>Thank you for using DawnBeacon — an independent, unofficial community tool for exploring DAWN Internet.</p>
-            <p><strong>Your Fit Recommendation:</strong> ${recommendation || "See the app for your full result"}</p>
-            <hr style="border-color: #E96C38; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #888;">
-              DawnBeacon is an independent, unofficial community tool. Not affiliated with or endorsed by DAWN Internet.
-              All reward mechanics shown trace to DAWN's published blog posts and whitepaper.
-              <br/><br/>
-              You received this email because you submitted the Check My Fit form and consented to contact.
-              To request data deletion, reply to this email.
-            </p>
-          </div>
-        `,
+    if (resendApiKey) {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: email,
+          subject: "Your DawnBeacon Check My Fit Result",
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #E96C38;">Your DawnBeacon Result</h2>
+              <p>Hi ${name},</p>
+              <p>Thank you for using DawnBeacon — an independent, unofficial community tool for exploring DAWN Internet.</p>
+              <p><strong>Your Fit Recommendation:</strong> ${recommendation || "See the app for your full result"}</p>
+              <hr style="border-color: #E96C38; margin: 20px 0;" />
+              <p style="font-size: 12px; color: #888;">
+                DawnBeacon is an independent, unofficial community tool. Not affiliated with or endorsed by DAWN Internet.
+                All reward mechanics shown trace to DAWN's published blog posts and whitepaper.
+                <br/><br/>
+                You received this email because you submitted the Check My Fit form and consented to contact.
+                To request data deletion, reply to this email.
+              </p>
+            </div>
+          `,
+        }),
       });
     }
 
