@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
       // Rebuild the full recommendation + hardware factors here, server-side,
       // using the same deterministic logic as the app — nothing stored, nothing
       // re-read from Neon, computed fresh from the submitted answers only.
-      const matchResult = getRecommendation({ rooftopAccess: Boolean(rooftopAccess), propertyType, nearbyDensity, interest });
       const hardwareFactors = evaluateHardwareFactors({ rooftopAccess: Boolean(rooftopAccess), propertyType, nearbyDensity, interest });
+      const matchResult = getRecommendation({ rooftopAccess: Boolean(rooftopAccess), propertyType, nearbyDensity, interest }, hardwareFactors);
 
       const factorRows = (label: string, factors: typeof hardwareFactors.blackBox.factors) =>
         factors

@@ -185,7 +185,7 @@ export default function OpportunityMapTab({ onTabChange, onResult }: Opportunity
         rooftopAccess: false,
         nearbyDensity: "few",
         interest: "not sure",
-        matchResult: getRecommendation({ rooftopAccess: false, propertyType: "commercial", nearbyDensity: "few", interest: "not sure" }),
+        matchResult: getRecommendation({ rooftopAccess: false, propertyType: "commercial", nearbyDensity: "few", interest: "not sure" }, evaluateHardwareFactors({ rooftopAccess: false, propertyType: "commercial", nearbyDensity: "few", interest: "not sure" })),
         hardwareFactors: evaluateHardwareFactors({ rooftopAccess: false, propertyType: "commercial", nearbyDensity: "few", interest: "not sure" }),
         locationName,
         coordinates: { lat, lng },
@@ -204,18 +204,18 @@ export default function OpportunityMapTab({ onTabChange, onResult }: Opportunity
     const density = inferDensity(overpassData);
 
     const regionCheck = checkRegion(country, region);
-    const matchResult = getRecommendation({
-      rooftopAccess: false,
-      propertyType: "commercial",
-      nearbyDensity: density,
-      interest: "not sure",
-    });
     const hardwareFactors = evaluateHardwareFactors({
       rooftopAccess: false,
       propertyType: "commercial",
       nearbyDensity: density,
       interest: "not sure",
     });
+    const matchResult = getRecommendation({
+      rooftopAccess: false,
+      propertyType: "commercial",
+      nearbyDensity: density,
+      interest: "not sure",
+    }, hardwareFactors);
 
     const fitResult: FitResult = {
       propertyType: "commercial",

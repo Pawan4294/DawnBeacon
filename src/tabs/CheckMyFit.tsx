@@ -62,8 +62,8 @@ export default function CheckMyFitTab({ onTabChange, onResult }: CheckMyFitProps
     setSubmitting(true);
     setSubmitError("");
 
-    const matchResult = getRecommendation({ rooftopAccess, propertyType, nearbyDensity, interest });
     const hardwareFactors = evaluateHardwareFactors({ rooftopAccess, propertyType, nearbyDensity, interest });
+    const matchResult = getRecommendation({ rooftopAccess, propertyType, nearbyDensity, interest }, hardwareFactors);
 
     const fitResult: FitResult = {
       name, email, propertyType, rooftopAccess, nearbyDensity, interest,

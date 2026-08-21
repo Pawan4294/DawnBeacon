@@ -6,6 +6,8 @@
  * No fabricated numbers — purely qualitative rule matching.
  */
 
+import type { HardwareFactorsResult } from "./hardwareFactors";
+
 export type Recommendation = "Black Box" | "Antenna" | "Recruit a Bigger Host";
 
 export interface MatchInput {
@@ -24,10 +26,10 @@ export interface MatchResult {
   caveats: string[];
 }
 
-export function getRecommendation(input: MatchInput): MatchResult {
+export function getRecommendation(input: MatchInput, scores?: HardwareFactorsResult): MatchResult {
   const { rooftopAccess, propertyType, nearbyDensity, interest } = input;
 
-  // Rule: If interest is "someone else", guide to recruit path
+  // Rule: If interest is "someone else", guide to recruit path — unaffected by scores
   if (interest === "someone else") {
     return {
       recommendation: "Recruit a Bigger Host",
@@ -42,41 +44,46 @@ export function getRecommendation(input: MatchInput): MatchResult {
     };
   }
 
-  // Rule: Strong Antenna candidate
-  if (rooftopAccess && nearbyDensity === "a lot" && (propertyType === "commercial" || propertyType === "school")) {
+  // If we have real computed fit scores, let them decide which hardware wins —
+  // this keeps the headline recommendation consistent with the Hardware Fit
+  // Analysis numbers shown on screen, instead of a separate rule ladder that
+  // could disagree with the scores.
+  if (scores) {
+    const bb = scores.blackBox.fitScore;
+    const ant = scores.antenna.fitScore;
+
+    if (ant > bb) {
+      const confidence = ant >= 75 ? "High" : ant >= 50 ? "Medium" : "Low";
+      return {
+        recommendation: "Antenna",
+        confidence,
+        reason: scores.antenna.summary,
+        secondaryOption: "Black Box",
+        secondaryReason: "A Black Box can run alongside or independently if the Antenna application is pending.",
+        caveats: [
+          "The Deployer form targets operators with existing or multiple sites — individual applicants can apply under 'Other'",
+          "Hardware reward amounts are not published as a specific formula by DAWN",
+          "Confirmed DAWN markets may affect geographic bonus eligibility",
+        ],
+      };
+    }
+
+    const confidence = bb >= 75 ? "High" : bb >= 50 ? "Medium" : "Low";
     return {
-      recommendation: "Antenna",
-      confidence: "High",
-      reason:
-        "You have rooftop access, a dense nearby population, and a commercial or institutional property — this closely matches the Deployer program's target profile for Antenna deployment.",
-      secondaryOption: "Black Box",
-      secondaryReason: "A Black Box can run alongside or independently if the Antenna application is pending.",
+      recommendation: "Black Box",
+      confidence,
+      reason: scores.blackBox.summary,
+      secondaryOption: rooftopAccess ? "Antenna" : undefined,
+      secondaryReason: rooftopAccess ? "You have rooftop access — Antenna may also be worth reviewing via the Deployer form." : undefined,
       caveats: [
-        "The Deployer form targets operators with existing or multiple sites — individual applicants can apply under 'Other'",
-        "Hardware reward amounts are not published as a specific formula by DAWN",
-        "Confirmed DAWN markets may affect geographic bonus eligibility",
+        "Geographic bonus eligibility depends on DAWN's Medallion zone mapping — no guarantee",
+        "Hardware reward amounts are not published as a specific formula",
+        "The Validator Extension (free, no hardware) is also available for any user",
       ],
     };
   }
 
-  // Rule: Moderate Antenna candidate
-  if (rooftopAccess && nearbyDensity !== "few") {
-    return {
-      recommendation: "Antenna",
-      confidence: "Medium",
-      reason:
-        "You have rooftop access and moderate nearby density, which are two of the main requirements for Antenna placement. The Deployer form is worth reviewing.",
-      secondaryOption: "Black Box",
-      secondaryReason: "Black Box is a simpler entry point that doesn't require rooftop access approval.",
-      caveats: [
-        "Line-of-sight quality matters — a clear, unobstructed view of the surrounding area is important",
-        "The Deployer form is designed for applicants with existing or multiple locations",
-        "No hardware reward formula is published — qualitative factors only",
-      ],
-    };
-  }
-
-  // Rule: Black Box — dense urban, no rooftop
+  // Fallback rule ladder — only used if scores aren't available for some reason
   if (!rooftopAccess && nearbyDensity === "a lot") {
     return {
       recommendation: "Black Box",
@@ -91,7 +98,6 @@ export function getRecommendation(input: MatchInput): MatchResult {
     };
   }
 
-  // Rule: Black Box — home/shop, any density
   if (propertyType === "home" || propertyType === "shop") {
     return {
       recommendation: "Black Box",
@@ -106,22 +112,6 @@ export function getRecommendation(input: MatchInput): MatchResult {
     };
   }
 
-  // Rule: Low density, no rooftop — still Black Box but with caveat
-  if (nearbyDensity === "few") {
-    return {
-      recommendation: "Black Box",
-      confidence: "Low",
-      reason:
-        "Low nearby density reduces geographic bonus potential, but the Black Box can still participate in bandwidth seeding and multi-network DePIN. The Validator Extension (free) is also worth running.",
-      caveats: [
-        "Sparse areas may have limited Medallion zone bonus eligibility",
-        "Consider whether a nearby urban site (shop, school) might be a better host",
-        "No hardware reward formula is published — qualitative factors only",
-      ],
-    };
-  }
-
-  // Default / not sure
   return {
     recommendation: "Black Box",
     confidence: "Low",
