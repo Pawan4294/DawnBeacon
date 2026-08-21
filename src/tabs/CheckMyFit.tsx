@@ -17,7 +17,7 @@ import type { TabId } from "@/app/page";
 
 interface CheckMyFitProps {
   onTabChange: (tab: TabId) => void;
-  onResult: (result: FitResult) => void;
+  onResult: (result: FitResult | null) => void;
 }
 
 type PropertyType = "home" | "shop" | "school" | "commercial";
@@ -485,7 +485,7 @@ export default function CheckMyFitTab({ onTabChange, onResult }: CheckMyFitProps
                 Generate My Pitch →
               </motion.button>
               <motion.button
-                onClick={() => { setSubmitted(false); setResult(null); setShowCalculator(false); }}
+                onClick={() => { setSubmitted(false); setResult(null); setShowCalculator(false); onResult(null); }}
                 className="btn-secondary flex items-center gap-2"
                 whileHover={{ scale: 1.02 }}
               >
