@@ -9,6 +9,8 @@ import {
 import { getRecommendation } from "@/logic/matchEngine";
 import { evaluateHardwareFactors } from "@/logic/hardwareFactors";
 import { calculateExtensionRewards } from "@/logic/extensionCalculator";
+import { nominatimSearch, queryOverpass, inferDensity } from "@/logic/locationLookup";
+import type { NominatimResult, OverpassData } from "@/logic/locationLookup";
 import { EXTENSION_REWARDS, DAWN_LINKS, DISCLAIMERS, HARDWARE_FACTS } from "@/data/dawnFacts";
 import ConsentCheckbox from "@/components/ConsentCheckbox";
 import DataDisclaimer from "@/components/DataDisclaimer";
@@ -33,6 +35,42 @@ export default function CheckMyFitTab({ onTabChange, onResult }: CheckMyFitProps
   const [nearbyDensity, setNearbyDensity] = useState<Density>("moderate");
   const [interest, setInterest] = useState<Interest>("myself");
   const [consent, setConsent] = useState(false);
+
+  // Location search state — real address, real Overpass density, no fabricated data
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState<NominatimResult[]>([]);
+  const [locationSearching, setLocationSearching] = useState(false);
+  const [locationPin, setLocationPin] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [locationOverpass, setLocationOverpass] = useState<OverpassData | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  const handleLocationSearch = async () => {
+    if (!locationQuery.trim()) return;
+    setLocationSearching(true);
+    try {
+      const results = await nominatimSearch(locationQuery);
+      setLocationResults(results);
+    } catch {
+      setLocationResults([]);
+    }
+    setLocationSearching(false);
+  };
+
+  const handleSelectLocation = async (r: NominatimResult) => {
+    const lat = parseFloat(r.lat);
+    const lng = parseFloat(r.lon);
+    setLocationPin({ name: r.display_name, lat, lng });
+    setLocationResults([]);
+    setLocationQuery("");
+    setLocationLoading(true);
+    const overpass = await queryOverpass(lat, lng);
+    setLocationOverpass(overpass);
+    if (overpass) {
+      setNearbyDensity(inferDensity(overpass));
+    }
+    setLocationLoading(false);
+  };
+
 
   // UI state
   const [submitted, setSubmitted] = useState(false);
@@ -177,7 +215,56 @@ export default function CheckMyFitTab({ onTabChange, onResult }: CheckMyFitProps
               </div>
 
               <div>
-                <label className="block text-xs text-white/50 mb-2">People/density nearby *</label>
+                <label className="block text-xs text-white/50 mb-2">Your address (optional but recommended) *</label>
+                <p className="text-[11px] text-white/35 mb-2">Search your real address so nearby density is measured from live map data, not guessed. You can skip this and set density manually below instead.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={locationQuery}
+                    onChange={(e) => setLocationQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleLocationSearch())}
+                    placeholder="Search any address, city, or landmark..."
+                    className="flex-1 px-4 py-3 rounded-xl text-sm bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.08)] text-white placeholder-white/30 focus:outline-none focus:border-[rgba(233,108,56,0.5)]"
+                  />
+                  <button type="button" onClick={handleLocationSearch} disabled={locationSearching}
+                    className="px-4 py-3 rounded-xl text-sm font-medium text-[#E96C38]"
+                    style={{ background: "rgba(233,108,56,0.12)", border: "1px solid rgba(233,108,56,0.3)" }}>
+                    {locationSearching ? "..." : "Search"}
+                  </button>
+                </div>
+
+                {locationResults.length > 0 && (
+                  <div className="mt-2 rounded-xl overflow-hidden border border-[rgba(255,255,255,0.08)]">
+                    {locationResults.map((r, i) => (
+                      <button key={i} type="button" onClick={() => handleSelectLocation(r)}
+                        className="w-full text-left px-4 py-2.5 text-xs text-white/70 hover:bg-[rgba(233,108,56,0.1)] border-b border-[rgba(255,255,255,0.05)] last:border-0">
+                        {r.display_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {locationPin && (
+                  <div className="mt-3 p-3 rounded-xl text-xs" style={{ background: "rgba(233,108,56,0.08)", border: "1px solid rgba(233,108,56,0.2)" }}>
+                    {locationLoading ? (
+                      <span className="text-white/50">Checking real map data for this location...</span>
+                    ) : locationOverpass ? (
+                      <span className="text-[#E96C38]">
+                        ✓ Location set: {locationPin.name}. Nearby density auto-detected as <strong>{nearbyDensity}</strong> from live OpenStreetMap data ({locationOverpass.buildingCount} features within 500m).
+                      </span>
+                    ) : (
+                      <span className="text-white/50">
+                        Location set: {locationPin.name}. Limited map data available here — density left as manual selection below.
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-white/50 mb-2">
+                  People/density nearby * {locationOverpass && <span className="text-[#E96C38]">(auto-detected — adjust if needed)</span>}
+                </label>
                 <div className="grid grid-cols-3 gap-2">
                   {([["few", "Sparse 🏕"], ["moderate", "Moderate 🏘"], ["a lot", "Dense 🏙"]] as [Density, string][]).map(([val, label]) => (
                     <button key={val} type="button"
