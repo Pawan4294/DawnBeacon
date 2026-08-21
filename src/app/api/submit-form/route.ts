@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import nodemailer from "nodemailer";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
 
@@ -16,7 +17,6 @@ export async function POST(req: NextRequest) {
       consent,
     } = body;
 
-    // Validate required fields
     if (!name || !email || !propertyType || !nearbyDensity || !interest) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -30,7 +30,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Store only consented fields — no phone number
     await db.insert(leads).values({
       name,
       email,
@@ -43,23 +42,27 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
     });
 
-    // Send confirmation email via Resend if configured
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const fromEmail = process.env.FROM_EMAIL || "onboarding@resend.dev";
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const fromEmail = process.env.FROM_EMAIL || smtpUser;
 
-    if (resendApiKey) {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
+    if (smtpUser && smtpPass) {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
         },
-        body: JSON.stringify({
+      });
+
+      try {
+        await transporter.sendMail({
           from: fromEmail,
           to: email,
           subject: "Your DawnBeacon Check My Fit Result",
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #E96C38;">Your DawnBeacon Result</h2>
               <p>Hi ${name},</p>
               <p>Thank you for using DawnBeacon — an independent, unofficial community tool for exploring DAWN Internet.</p>
@@ -72,10 +75,11 @@ export async function POST(req: NextRequest) {
                 You received this email because you submitted the Check My Fit form and consented to contact.
                 To request data deletion, reply to this email.
               </p>
-            </div>
-          `,
-        }),
-      });
+            </div>`,
+        });
+      } catch (emailErr) {
+        console.error("Gmail SMTP send failed:", emailErr);
+      }
     }
 
     return NextResponse.json({ success: true });
